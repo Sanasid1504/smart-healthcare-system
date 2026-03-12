@@ -1,64 +1,195 @@
 import { useState } from 'react';
-import { QrCode, Download, CheckCircle } from 'lucide-react';
+import apiclient from '../Api/api';
+import { Download, CheckCircle, Loader2 } from 'lucide-react';
 
 const RegisterPatient = () => {
+  const [form, setForm] = useState({
+    name: "",
+    age: "",
+    gender: "Male",
+    location: "",
+    height: "",
+    weight: "",
+    disease: "",
+    prescription: "",
+    bp: "",
+    temperature: "",
+    doctor: "",
+    doctor_comment: ""
+  });
+
   const [submitted, setSubmitted] = useState(false);
+  const [patientId, setPatientId] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+
+      // 1️⃣ Create Patient
+      const patientRes = await apiclient.post("/patients", {
+        name: form.name,
+        age: Number(form.age),
+        gender: form.gender,
+        location: form.location,
+        height: Number(form.height),
+        weight: Number(form.weight)
+      });
+
+      const id = patientRes.data.id;
+      setPatientId(id);
+
+      // 2️⃣ Create Visit
+      await apiclient.post(`/patients/${id}/visits`, {
+        disease: form.disease,
+        prescription: form.prescription,
+        bp: form.bp,
+        temperature: Number(form.temperature),
+        doctor: form.doctor,
+        doctor_comment: form.doctor_comment
+      });
+
+      setSubmitted(true);
+
+    } catch (err) {
+      console.error(err);
+      alert("Registration failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+ const downloadQR = async () => {
+  try {
+    const res = await fetch(
+      `http://127.0.0.1:8000/patients/${patientId}/qr`
+    );
+
+    const blob = await res.blob();
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `patient_${patientId}_qr.png`;
+
+    document.body.appendChild(link);
+    link.click();
+
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    alert("QR download failed");
+    console.error(err);
+  }
+};
 
   if (submitted) {
     return (
       <div className="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-lg text-center">
-        <div className="flex justify-center mb-4 text-green-500">
-          <CheckCircle size={64} />
-        </div>
-        <h2 className="text-2xl font-bold mb-2">Registration Successful</h2>
-        <p className="text-gray-500 mb-6">Patient ID: 9a8c1a8d-1234</p>
-        
-        <div className="bg-gray-50 p-6 rounded-xl border-2 border-dashed border-gray-200 mb-6 flex justify-center">
-           <QrCode size={180} className="text-gray-800" />
-        </div>
+        <CheckCircle size={60} className="mx-auto text-green-500 mb-4" />
+        <h2 className="text-2xl font-bold">Registration Successful</h2>
+        <p className="text-gray-500 mb-6">Patient ID: {patientId}</p>
 
-        <button className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-lg font-bold">
-          <Download size={20} /> Download QR Code
+        <img
+          src={`http://127.0.0.1:8000/patients/${patientId}/qr`}
+          className="mx-auto mb-6 w-44"
+          alt="QR"
+        />
+
+        <button
+          onClick={downloadQR}
+          className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-lg font-bold"
+        >
+          <Download size={18} /> Download QR
         </button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">Register New Patient</h2>
-      <form onSubmit={(e) => { e.preventDefault(); setSubmitted(true); }} className="grid grid-cols-2 gap-4">
+    <div className="max-w-3xl mx-auto bg-white p-8 rounded-2xl border shadow-sm">
+      <h2 className="text-2xl font-bold mb-6">Register New Patient</h2>
+
+      <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700">Full Name</label>
-          <input required className="mt-1 w-full p-2 border rounded-md" placeholder="John Doe" />
+          <label>Name</label>
+          <input name="name" required onChange={handleChange} className="w-full p-2 border rounded" />
         </div>
+
         <div>
-          <label className="block text-sm font-medium text-gray-700">Age</label>
-          <input type="number" required className="mt-1 w-full p-2 border rounded-md" />
+          <label>Age</label>
+          <input type="number" name="age" required onChange={handleChange} className="w-full p-2 border rounded" />
         </div>
+
         <div>
-          <label className="block text-sm font-medium text-gray-700">Gender</label>
-          <select className="mt-1 w-full p-2 border rounded-md">
+          <label>Gender</label>
+          <select name="gender" onChange={handleChange} className="w-full p-2 border rounded">
             <option>Male</option>
             <option>Female</option>
             <option>Other</option>
           </select>
         </div>
-        <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700">Location</label>
-          <input required className="mt-1 w-full p-2 border rounded-md" placeholder="e.g. Mumbai" />
+
+        <div>
+          <label>Height (cm)</label>
+          <input type="number" name="height" required onChange={handleChange} className="w-full p-2 border rounded" />
         </div>
-        <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700">Diagnosis</label>
-          <input required className="mt-1 w-full p-2 border rounded-md" placeholder="Current Disease" />
+
+        <div>
+          <label>Weight (kg)</label>
+          <input type="number" name="weight" required onChange={handleChange} className="w-full p-2 border rounded" />
         </div>
+
         <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700">Prescription</label>
-          <textarea className="mt-1 w-full p-2 border rounded-md" rows="3"></textarea>
+          <label>Location</label>
+          <input name="location" required onChange={handleChange} className="w-full p-2 border rounded" />
         </div>
-        <button className="col-span-2 mt-4 bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition">
-          Register Patient
+
+        <div className="col-span-2 mt-4 font-bold text-gray-700">
+          Initial Medical Visit
+        </div>
+
+        <div className="col-span-2">
+          <label>Disease</label>
+          <input name="disease" required onChange={handleChange} className="w-full p-2 border rounded" />
+        </div>
+
+        <div className="col-span-2">
+          <label>Prescription</label>
+          <textarea name="prescription" onChange={handleChange} className="w-full p-2 border rounded" />
+        </div>
+
+        <div>
+          <label>Blood Pressure</label>
+          <input name="bp" placeholder="120/80" onChange={handleChange} className="w-full p-2 border rounded" />
+        </div>
+
+        <div>
+          <label>Temperature (°C)</label>
+          <input type="number" step="0.1" name="temperature" onChange={handleChange} className="w-full p-2 border rounded" />
+        </div>
+
+        <div>
+          <label>Doctor Name</label>
+          <input name="doctor" onChange={handleChange} className="w-full p-2 border rounded" />
+        </div>
+
+        <div>
+          <label>Doctor Comments</label>
+          <input name="doctor_comment" onChange={handleChange} className="w-full p-2 border rounded" />
+        </div>
+
+        <button className="col-span-2 bg-blue-600 text-white py-3 rounded-lg font-bold mt-4">
+          {loading ? <Loader2 className="animate-spin mx-auto" /> : "Register Patient"}
         </button>
+
       </form>
     </div>
   );

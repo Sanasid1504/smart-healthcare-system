@@ -1,147 +1,305 @@
-import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, Clock, Activity, 
-  Pill, ChevronRight, QrCode 
-} from 'lucide-react';
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import apiclient from "../Api/api";
+import { ArrowLeft, Clock, Pill, FileText, User } from "lucide-react";
 
-// Master Data List
-const patientsData = [
-  { id: 'P101', name: 'Rajesh Kumar', age: 45, gender: 'Male', location: 'Delhi', phone: '+91 98765 43210', diagnosis: 'Type 2 Diabetes' },
-  { id: 'P102', name: 'Priya Sharma', age: 32, gender: 'Female', location: 'Mumbai', phone: '+91 98765 43211', diagnosis: 'Hypertension' },
-  { id: 'P103', name: 'Ahmed Khan', age: 28, gender: 'Male', location: 'Bangalore', phone: '+91 98765 43212', diagnosis: 'COVID-19' },
-  { id: 'P104', name: 'Sneha Patel', age: 55, gender: 'Female', location: 'Ahmedabad', phone: '+91 98765 43213', diagnosis: 'Asthma' },
-  { id: 'P105', name: 'Vijay Singh', age: 62, gender: 'Male', location: 'Jaipur', phone: '+91 98765 43214', diagnosis: 'Heart Disease' },
-  { id: 'P106', name: 'Anita Desai', age: 38, gender: 'Female', location: 'Pune', phone: '+91 98765 43215', diagnosis: 'Migraine' },
-];
+const formatDate = (date) => {
+  if (!date) return "Date not available";
+  const d = new Date(date);
+  return isNaN(d.getTime()) ? "Invalid date" : d.toLocaleDateString();
+};
 
 const PatientHistory = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // Find specific patient
-  const currentPatient = patientsData.find(p => p.id === id) || patientsData[0];
+  const [patient, setPatient] = useState(null);
+  const [visits, setVisits] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+const [saving, setSaving] = useState(false);
 
-  const historyData = [
-    {
-      date: "Mar 10, 2026",
-      type: "Follow-up",
-      doctor: "Dr. Aditi Verma",
-      vitals: { temp: "98.4°F", bp: "120/80", hr: "72 bpm" },
-      prescription: ["Paracetamol 500mg", "Electrolyte Salts"],
-      status: "Recovering"
-    },
-    {
-      date: "Mar 05, 2026",
-      type: "Emergency Admission",
-      doctor: "Dr. Karan Mehra",
-      vitals: { temp: "103.2°F", bp: "110/70", hr: "88 bpm" },
-      prescription: ["IV Fluids", "Paracetamol 650mg"],
-      status: "Critical"
-    }
-  ];
+const [newVisit, setNewVisit] = useState({
+  disease: "",
+  prescription: "",
+  temperature: "",
+  bp: "",
+  doctor: "",
+  doctor_comment: ""
+});
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const patientRes = await apiclient.get(`/patients/${id}`);
+        setPatient(patientRes.data);
+
+        const visitsRes = await apiclient.get(`/patients/${id}/visits`);
+
+        const sorted = (visitsRes.data || []).sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at)
+        );
+
+        setVisits(sorted);
+      } catch (err) {
+        console.error("Error fetching history", err);
+      }
+    };
+
+    fetchData();
+  }, [id]);
+
+  const handleVisitChange = (e) => {
+  setNewVisit({ ...newVisit, [e.target.name]: e.target.value });
+};
+
+const addVisit = async () => {
+  try {
+    setSaving(true);
+
+    await apiclient.post(`/patients/${id}/visits`, {
+      disease: newVisit.disease,
+      prescription: newVisit.prescription,
+      temperature: Number(newVisit.temperature),
+      bp: newVisit.bp,
+      doctor: newVisit.doctor,
+      doctor_comment: newVisit.doctor_comment
+    });
+
+    setShowModal(false);
+
+    // reload visits
+    const visitsRes = await apiclient.get(`/patients/${id}/visits`);
+    setVisits(visitsRes.data.sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    ));
+
+  } catch (err) {
+    alert("Visit creation failed");
+  } finally {
+    setSaving(false);
+  }
+};
+
+  if (!patient) return <div className="p-10">Loading Patient...</div>;
 
   return (
     <div className="max-w-10xl mx-auto space-y-10 px-4">
-      {/* Header - Download button removed */}
-      <div className="flex justify-between items-center">
-        <div>
-          <button 
-            onClick={() => navigate(-1)} 
-            className="flex items-center gap-2 text-blue-600 font-bold mb-2 hover:translate-x-[-4px] transition-transform"
-          >
-            <ArrowLeft size={18} /> Back to Records
-          </button>
-          <h1 className="text-4xl font-black text-gray-900 uppercase">Health Timeline</h1>
-        </div>
+
+      {/* Header */}
+      <div>
+        <div className="flex"><button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-blue-600 font-bold mb-2"
+        >
+          <ArrowLeft size={18} /> Back to Records
+        </button>
+        <button
+  onClick={() => setShowModal(true)}
+  className="ml-4 bg-blue-600 text-white px-4 py-2 rounded-lg font-bold"
+>
+  + Add Visit
+</button></div>
+        <h1 className="text-4xl font-black text-gray-900 uppercase">
+          Medical Timeline
+        </h1>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-10 items-start">
+
         {/* Timeline */}
-        <div className="lg:col-span-2 space-y-8 relative">
-          <div className="absolute left-8 top-10 bottom-10 w-1 bg-gray-100 hidden md:block rounded-full"></div>
+        <div className="lg:col-span-2 space-y-8">
 
-          {historyData.map((entry, idx) => (
-            <div key={idx} className="relative pl-0 md:pl-24 group">
-              <div className={`absolute left-6 top-10 w-5 h-5 rounded-full border-4 border-white shadow-lg hidden md:block z-10 ${
-                entry.status === 'Critical' ? 'bg-red-500' : 'bg-blue-500'
-              }`}></div>
+          {visits.length === 0 && (
+            <div className="bg-white p-10 rounded-3xl text-center text-gray-400 font-bold">
+              No visit history yet
+            </div>
+          )}
 
-              <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm p-8 space-y-6">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-4">
-                    <div className="bg-blue-50 p-3 rounded-xl text-blue-600">
-                      <Clock size={20} />
-                    </div>
-                    <div>
-                      <h4 className="text-xl font-black text-gray-800 uppercase leading-none">{entry.type}</h4>
-                      <p className="text-blue-600 font-bold text-xs mt-1">{entry.date} • {entry.doctor}</p>
-                    </div>
+          {visits.map((visit) => (
+            <div key={visit.id} className="bg-white rounded-[2.5rem] border p-8 space-y-6 shadow-sm">
+
+              {/* Disease + Date */}
+              <div className="flex items-center gap-4">
+                <Clock size={20} className="text-blue-600" />
+                <div>
+                  <h4 className="text-xl font-black">
+                    {visit.disease || "No diagnosis"}
+                  </h4>
+                  <p className="text-blue-600 text-xs">
+                    {formatDate(visit.visit_time || visit.created_at)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Prescription */}
+              <div className="pt-4 border-t flex items-start gap-3">
+                <Pill size={18} className="text-gray-400 mt-1" />
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 mb-1">
+                    PRESCRIPTION
+                  </p>
+                  <p className="font-bold text-gray-700">
+                    {visit.prescription || "No prescription provided"}
+                  </p>
+                </div>
+              </div>
+             {(visit.temperature || visit.bp) && (
+      <div className="bg-gray-50 p-5 rounded-2xl border flex justify-between">
+
+        {visit.temperature && (
+          <div>
+            <p className="text-[10px] font-black text-gray-400">TEMP</p>
+            <p className="font-black text-gray-800 text-lg">
+              {visit.temperature} °C
+            </p>
+          </div>
+        )}
+
+        {visit.bp && (
+          <div>
+            <p className="text-[10px] font-black text-gray-400">BP</p>
+            <p className="font-black text-gray-800 text-lg">
+              {visit.bp}
+            </p>
+          </div>
+        )}
+
+      </div>
+    )}
+              {/* Comments */}
+              {visit.doctor_comment && (
+                <div className="flex items-start gap-3">
+                  <FileText size={18} className="text-gray-400 mt-1" />
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 mb-1">
+                      DOCTOR NOTES
+                    </p>
+                    <p className="font-medium text-gray-700">
+                      {visit.doctor_comment}
+                    </p>
                   </div>
                 </div>
+              )}
 
-                <div className="grid md:grid-cols-2 gap-6 pt-4 border-t border-gray-50">
-                   <div>
-                      <h5 className="text-[10px] font-black text-gray-400 uppercase mb-3 tracking-widest flex items-center gap-2">
-                        <Pill size={12} /> Meds
-                      </h5>
-                      <div className="space-y-1">
-                        {entry.prescription.map((p, i) => (
-                          <p key={i} className="flex items-center gap-2 font-bold text-gray-700 text-sm">
-                            <ChevronRight size={14} className="text-blue-500"/> {p}
-                          </p>
-                        ))}
-                      </div>
-                   </div>
-                   <div className="bg-gray-50 p-4 rounded-2xl">
-                      <h5 className="text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest">Vitals</h5>
-                      <div className="flex justify-between">
-                        <div><p className="text-[8px] font-bold text-gray-400 uppercase">BP</p><p className="font-black text-gray-800 text-sm">{entry.vitals.bp}</p></div>
-                        <div><p className="text-[8px] font-bold text-gray-400 uppercase">Temp</p><p className="font-black text-gray-800 text-sm">{entry.vitals.temp}</p></div>
-                        <div><p className="text-[8px] font-bold text-gray-400 uppercase">HR</p><p className="font-black text-gray-800 text-sm">{entry.vitals.hr}</p></div>
-                      </div>
-                   </div>
+              {/* Doctor */}
+              {visit.doctor && (
+                <div className="flex items-start gap-3">
+                  <User size={18} className="text-gray-400 mt-1" />
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 mb-1">
+                      ATTENDED BY
+                    </p>
+                    <p className="font-medium text-gray-700">
+                      {visit.doctor}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
+
             </div>
           ))}
+
         </div>
 
-        {/* Side Card */}
+        {/* Smart Card */}
         <div className="sticky top-24">
-          <div className="bg-white rounded-[2rem] border border-gray-100 shadow-xl overflow-hidden">
-            <div className="bg-blue-50/40 p-6 border-b border-gray-50">
-               <h3 className="text-blue-900 font-bold text-xl">Smart Health Card</h3>
-               <p className="text-gray-400 text-xs font-medium">Digital identity & quick access</p>
-            </div>
-            
+          <div className="bg-white rounded-[2rem] border shadow-xl overflow-hidden">
             <div className="p-8 space-y-8">
-              <div className="mx-auto w-44 h-44 bg-white border border-gray-100 rounded-2xl flex items-center justify-center p-4">
-                 <QrCode size={120} strokeWidth={1.5} className="text-gray-800" />
-              </div>
+
+              <img
+                src={`https://hackstreak-backend.onrender.com/patients/${id}/qr`}
+                className="mx-auto w-44"
+                alt="QR"
+              />
 
               <div className="space-y-4 pt-2">
-                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                  <span className="text-gray-400 text-sm">Patient ID</span>
-                  <span className="font-mono font-bold text-gray-800 text-sm">{currentPatient.id}</span>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Patient ID</span>
+                  <span className="font-mono font-bold">{patient.id}</span>
                 </div>
-                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                  <span className="text-gray-400 text-sm">Name</span>
-                  <span className="font-bold text-gray-900">{currentPatient.name}</span>
+
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Name</span>
+                  <span className="font-bold">{patient.name}</span>
                 </div>
-                <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-                  <span className="text-gray-400 text-sm">Age</span>
-                  <span className="font-bold text-gray-900">{currentPatient.age} yrs</span>
+
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Age</span>
+                  <span className="font-bold">{patient.age}</span>
                 </div>
-                <div className="flex justify-between items-start">
-                  <span className="text-gray-400 text-sm">Location</span>
-                  <span className="font-bold text-gray-900 text-right w-1/2">{currentPatient.location}</span>
+
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Gender</span>
+                  <span className="font-bold">{patient.gender}</span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Location</span>
+                  <span className="font-bold">{patient.location}</span>
                 </div>
               </div>
+
             </div>
           </div>
         </div>
+
       </div>
+      {showModal && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white p-8 rounded-2xl w-full max-w-lg space-y-4">
+
+      <h2 className="text-xl font-bold">Add New Visit</h2>
+
+      <input name="disease" placeholder="Disease"
+        onChange={handleVisitChange}
+        className="w-full p-2 border rounded"
+      />
+
+      <textarea name="prescription" placeholder="Prescription"
+        onChange={handleVisitChange}
+        className="w-full p-2 border rounded"
+      />
+
+      <div className="grid grid-cols-2 gap-3">
+        <input name="temperature" placeholder="Temperature"
+          onChange={handleVisitChange}
+          className="p-2 border rounded"
+        />
+        <input name="bp" placeholder="BP 120/80"
+          onChange={handleVisitChange}
+          className="p-2 border rounded"
+        />
+      </div>
+
+      <input name="doctor" placeholder="Doctor Name"
+        onChange={handleVisitChange}
+        className="w-full p-2 border rounded"
+      />
+
+      <input name="doctor_comment" placeholder="Doctor Comment"
+        onChange={handleVisitChange}
+        className="w-full p-2 border rounded"
+      />
+
+      <div className="flex justify-end gap-3 pt-3">
+        <button
+          onClick={() => setShowModal(false)}
+          className="px-4 py-2 border rounded"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={addVisit}
+          className="bg-blue-600 text-white px-4 py-2 rounded"
+        >
+          {saving ? "Saving..." : "Save Visit"}
+        </button>
+      </div>
+
+    </div>
+  </div>
+)}
     </div>
   );
 };

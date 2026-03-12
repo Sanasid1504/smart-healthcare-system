@@ -1,116 +1,193 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Search, User, MapPin, Phone, FileText, 
-  Calendar, AlertCircle, QrCode 
-} from 'lucide-react';
-
-const patientsData = [
-  { id: 'P101', name: 'Rajesh Kumar', age: 45, gender: 'Male', location: 'Delhi', phone: '+91 98765 43210', diagnosis: 'Type 2 Diabetes', lastVisit: 'Mar 10, 2026', severity: 'Medium', status: 'Active' },
-  { id: 'P102', name: 'Priya Sharma', age: 32, gender: 'Female', location: 'Mumbai', phone: '+91 98765 43211', diagnosis: 'Hypertension', lastVisit: 'Mar 9, 2026', severity: 'Low', status: 'Active' },
-  { id: 'P103', name: 'Ahmed Khan', age: 28, gender: 'Male', location: 'Bangalore', phone: '+91 98765 43212', diagnosis: 'COVID-19', lastVisit: 'Mar 12, 2026', severity: 'High', status: 'Critical' },
-  { id: 'P104', name: 'Sneha Patel', age: 55, gender: 'Female', location: 'Ahmedabad', phone: '+91 98765 43213', diagnosis: 'Asthma', lastVisit: 'Mar 8, 2026', severity: 'Medium', status: 'Active' },
-  { id: 'P105', name: 'Vijay Singh', age: 62, gender: 'Male', location: 'Jaipur', phone: '+91 98765 43214', diagnosis: 'Heart Disease', lastVisit: 'Mar 11, 2026', severity: 'High', status: 'Critical' },
-  { id: 'P106', name: 'Anita Desai', age: 38, gender: 'Female', location: 'Pune', phone: '+91 98765 43215', diagnosis: 'Migraine', lastVisit: 'Mar 7, 2026', severity: 'Low', status: 'Active' },
-];
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import apiclient from "../Api/api";
+import {
+  Search,
+  User,
+  MapPin,
+  FileText,
+  Calendar,
+  Loader2,
+  Pencil,
+  Trash
+} from "lucide-react";
 
 const PatientRecord = () => {
-  const [filter, setFilter] = useState('All');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [patients, setPatients] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({});
+
   const navigate = useNavigate();
 
-  const filteredPatients = patientsData.filter(p => {
-    const matchesFilter = filter === 'All' || p.status === filter;
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          p.id.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      loadPatients();
+    }, 500);
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchTerm]);
+
+  const loadPatients = async () => {
+    try {
+      setLoading(true);
+
+      if (searchTerm.trim() === "") {
+        const res = await apiclient.get("/patients");
+
+        const patientsWithVisits = await Promise.all(
+          res.data.map(async (p) => {
+            try {
+              const visitRes = await apiclient.get(`/patients/${p.id}/visits`);
+              return { ...p, visits: visitRes.data };
+            } catch {
+              return { ...p, visits: [] };
+            }
+          })
+        );
+
+        setPatients(patientsWithVisits);
+      } else {
+        const patientRes = await apiclient.get(`/patients/${searchTerm}`);
+        const visitRes = await apiclient.get(`/patients/${searchTerm}/visits`);
+
+        setPatients([{ ...patientRes.data, visits: visitRes.data }]);
+      }
+
+    } catch (err) {
+      setPatients([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deletePatient = async (id) => {
+    if (!window.confirm("Delete patient?")) return;
+    await apiclient.delete(`/patients/${id}`);
+    loadPatients();
+  };
+
+  const openEdit = (patient) => {
+    setEditing(patient.id);
+    setForm(patient);
+  };
+
+  const updatePatient = async () => {
+    await apiclient.put(`/patients/${editing}`, form);
+    setEditing(null);
+    loadPatients();
+  };
+
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  if (loading) {
+    return (
+      <div className="h-[70vh] flex items-center justify-center">
+        <Loader2 className="animate-spin text-blue-600" size={40} />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-transparent min-h-screen">
-      {/* INTERNAL HEADER REMOVED 
-          The main SmartHealth Navbar from App.jsx will now be the only thing visible at the top.
-      */}
-
       <main className="max-w-10xl mx-auto space-y-8">
-        {/* Search & Filter Section */}
-        <div className="bg-white p-5 rounded-[1rem] shadow-sm border border-gray-100 space-y-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
-              <input 
-                type="text" 
-                placeholder="Search by name, ID, diagnosis, or location..." 
-                className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-blue-500 transition"
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="flex gap-2 bg-gray-50 p-1.5 rounded-2xl">
-              {['All', 'Active', 'Critical', 'Recovered'].map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setFilter(cat)}
-                  className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${
-                    filter === cat 
-                    ? 'bg-blue-900 text-white shadow-lg' 
-                    : 'text-gray-500 hover:text-gray-800'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
+
+        {/* Search */}
+        <div className="bg-white p-5 rounded-[1rem] shadow-sm border space-y-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search by Patient ID..."
+              className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border rounded-2xl"
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <p className="text-sm text-gray-400">
+            Showing {patients.length} patients
+          </p>
+        </div>
+
+        {/* Grid */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {patients.map((patient) => {
+            const latestVisit =
+              patient.visits?.length > 0
+                ? patient.visits[patient.visits.length - 1]
+                : null;
+
+            return (
+              <div key={patient.id} className="bg-white rounded-[2.5rem] shadow border flex flex-col">
+
+                <div className="bg-blue-600 p-7 text-white">
+                  <h3 className="text-2xl font-bold">{patient.name}</h3>
+                  <p className="text-blue-100 text-sm">ID: {patient.id}</p>
+                </div>
+
+                <div className="p-7 space-y-4 flex-1">
+                  <div className="flex gap-3"><User size={18} /> {patient.age} • {patient.gender}</div>
+                  <div className="flex gap-3"><MapPin size={18} /> {patient.location}</div>
+                  <div className="flex gap-3"><FileText size={18} /> {latestVisit?.disease || "No diagnosis"}</div>
+                  <div className="flex gap-3"><Calendar size={18} /> {new Date(patient.created_at).toLocaleDateString()}</div>
+
+                  <img
+                    src={`https://hackstreak-backend.onrender.com/patients/${patient.id}/qr`}
+                    className="mx-auto w-24"
+                  />
+                </div>
+
+                <div className="p-6 flex gap-2">
+                  <button
+                    onClick={() => navigate(`/history/${patient.id}`)}
+                    className="flex-1 bg-blue-900 text-white py-3 rounded-xl"
+                  >
+                    History
+                  </button>
+
+                  <button
+                    onClick={() => openEdit(patient)}
+                    className="bg-yellow-400 p-3 rounded-xl"
+                  >
+                    <Pencil size={16} />
+                  </button>
+
+                  <button
+                    onClick={() => deletePatient(patient.id)}
+                    className="bg-red-500 p-3 rounded-xl text-white"
+                  >
+                    <Trash size={16} />
+                  </button>
+                </div>
+
+              </div>
+            );
+          })}
+        </div>
+
+        {/* EDIT MODAL */}
+        {editing && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+            <div className="bg-white p-8 rounded-3xl w-full max-w-lg space-y-4">
+              <h2 className="text-xl font-bold">Update Patient</h2>
+
+              <input name="name" value={form.name} onChange={handleChange} className="w-full p-3 border rounded" />
+              <input name="age" value={form.age} onChange={handleChange} className="w-full p-3 border rounded" />
+              <input name="gender" value={form.gender} onChange={handleChange} className="w-full p-3 border rounded" />
+              <input name="location" value={form.location} onChange={handleChange} className="w-full p-3 border rounded" />
+
+              <div className="flex justify-end gap-3">
+                <button onClick={() => setEditing(null)} className="border px-4 py-2 rounded">Cancel</button>
+                <button onClick={updatePatient} className="bg-blue-600 text-white px-4 py-2 rounded">Update</button>
+              </div>
             </div>
           </div>
-          <p className="text-sm text-gray-400 font-medium px-2">Showing {filteredPatients.length} of {patientsData.length} patients</p>
-        </div>
+        )}
 
-        {/* Patients Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredPatients.map((patient) => (
-            <div key={patient.id} className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col group transition hover:shadow-xl">
-              
-              <div className="bg-blue-600 p-7 text-white relative">
-                <span className={`absolute top-7 right-7 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                  patient.status === 'Critical' ? 'bg-red-500 shadow-lg shadow-red-200/50' : 'bg-blue-400'
-                }`}>
-                  {patient.status}
-                </span>
-                <h3 className="text-2xl font-bold mb-1">{patient.name}</h3>
-                <p className="text-blue-100 text-sm font-mono tracking-tighter uppercase opacity-80">ID: {patient.id}</p>
-              </div>
-
-              <div className="p-7 space-y-4 text-sm text-gray-600 flex-1">
-                <div className="flex items-center gap-3"><User size={18} className="text-gray-300" /> <span className="font-medium text-gray-700">{patient.age} years • {patient.gender}</span></div>
-                <div className="flex items-center gap-3"><MapPin size={18} className="text-gray-300" /> <span className="font-medium text-gray-700">{patient.location}</span></div>
-                <div className="flex items-center gap-3"><Phone size={18} className="text-gray-300" /> <span className="font-medium text-gray-700">{patient.phone}</span></div>
-                <div className="flex items-center gap-3"><FileText size={18} className="text-gray-300" /> <span className="font-medium text-gray-700">{patient.diagnosis}</span></div>
-                <div className="flex items-center gap-3"><Calendar size={18} className="text-gray-300" /> <span className="font-medium text-gray-700">Last Visit: {patient.lastVisit}</span></div>
-                <div className="flex items-center gap-3">
-                  <AlertCircle size={18} className="text-gray-300" /> 
-                  <span className="font-bold">Severity:</span>
-                  <span className={`font-black uppercase tracking-wide ${
-                    patient.severity === 'High' ? 'text-red-500' : 
-                    patient.severity === 'Medium' ? 'text-orange-500' : 'text-green-500'
-                  }`}>
-                    {patient.severity}
-                  </span>
-                </div>
-
-                <div className="mt-8 p-6 bg-gray-50 rounded-[2rem] border border-gray-100 flex flex-col items-center group-hover:bg-white transition">
-                  <QrCode size={110} strokeWidth={1.5} className="text-gray-800" />
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mt-3">Scan for quick access</p>
-                </div>
-              </div>
-
-              <div className="p-7 pt-0">
-                <button onClick={() => navigate(`/history/${patient.id}`)}
-                className="w-full bg-blue-900 text-white py-4 rounded-2xl font-bold hover:bg-blue-800 hover:scale-[1.02] transition shadow-lg shadow-blue-100">
-                  View Full History
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
       </main>
     </div>
   );

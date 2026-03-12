@@ -1,14 +1,45 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, QrCode, Activity } from 'lucide-react';
+import apiclient from '../Api/api';
 
 const Login = () => {
   const navigate = useNavigate();
-  const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = (e) => {
+  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    navigate('/dashboard');
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await apiclient.post("/user/login", {
+        email,
+        password
+      });
+
+      const token = res.data.access_token;
+
+      // store token
+      localStorage.setItem("token", token);
+      localStorage.setItem("role", role);
+
+      // redirect
+      navigate("/dashboard");
+
+    } catch (err) {
+      setError(
+        err?.response?.data?.detail || "Login failed. Try again."
+      );
+    }
+
+    setLoading(false);
   };
 
   return (
@@ -23,48 +54,70 @@ const Login = () => {
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
+
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Username / Email</label>
-            <input type="email" placeholder="Enter your email" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-blue-500" />
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Email
+            </label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-blue-500"
+            />
           </div>
 
           <div className="relative">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Password</label>
-            <input 
-              type={showPassword ? "text" : "password"} 
-              placeholder="Enter your password" 
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-blue-500" 
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Password
+            </label>
+            <input
+              type={showPassword ? "text" : "password"}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-blue-500"
             />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-9 text-gray-400">
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-9 text-gray-400"
+            >
               <Eye size={20} />
             </button>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Select Role</label>
-            <select className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-blue-500 appearance-none">
-              <option>Choose your role</option>
-              <option>Doctor</option>
-              <option>Staff</option>
-              <option>Admin</option>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Select Role
+            </label>
+            <select
+              required
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg outline-blue-500"
+            >
+              <option value="">Choose your role</option>
+              <option value="Staff">Staff</option>
+              <option value="Admin">Admin</option>
             </select>
           </div>
 
-          <button className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg transition shadow-md">
-            Sign In
+          {error && (
+            <p className="text-red-500 text-sm font-medium">{error}</p>
+          )}
+
+          <button
+            disabled={loading}
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-lg transition shadow-md"
+          >
+            {loading ? "Signing in..." : "Sign In"}
           </button>
+
         </form>
-
-        <div className="flex items-center my-6">
-          <div className="flex-grow border-t border-gray-200"></div>
-          <span className="px-3 text-gray-400 text-sm">OR</span>
-          <div className="flex-grow border-t border-gray-200"></div>
-        </div>
-
-        <button className="w-full flex items-center justify-center gap-2 border border-blue-900 text-blue-900 font-semibold py-3 rounded-lg hover:bg-blue-50 transition">
-          <QrCode size={20} />
-          Scan QR Code to Login
-        </button>
 
         <p className="mt-8 text-center text-xs text-gray-400">
           Secure healthcare access • End-to-end encrypted

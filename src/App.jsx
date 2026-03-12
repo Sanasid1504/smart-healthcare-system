@@ -8,6 +8,7 @@ import PatientHistory from './assets/pages/PatientHistory';
 import RegisterPatient from './assets/pages/RegisterPatient';
 import PatientRecord from './assets/pages/PatientRecord'; 
 import Analytics from './assets/pages/Analytics';
+import PublicPatientRecord from './assets/pages/PublicPatientRecord';
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
 
                   {/* Catch-all redirect */}
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="patient/:id" element={<PublicPatientRecord/>} />
                 </Routes>
               </main>
             </>
