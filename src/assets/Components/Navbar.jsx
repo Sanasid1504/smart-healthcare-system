@@ -25,9 +25,6 @@ const Navbar = () => {
             <Link to="/search" className="hover:text-blue-600 flex items-center gap-1">
               <Search size={18} /> Search
             </Link>
-            <Link to="/analytics" className="hover:text-blue-600 flex items-center gap-1">
-              <BarChart3 size={18} /> Analytics
-            </Link>
           </div>
 
           <button 

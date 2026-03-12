@@ -2,14 +2,35 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { 
   UserPlus, Search, BarChart3, Users, 
-  Activity, FileText, AlertTriangle, LogOut 
+  Activity, FileText, AlertTriangle 
 } from 'lucide-react';
 
 const Dashboard = () => {
   const actions = [
-    { title: "Register Patient", desc: "Add new patient records and update medical information", icon: <UserPlus />, path: "/register-patient", color: "bg-green-500", lightColor: "bg-green-50 text-green-600" },
-    { title: "Search Patient", desc: "Find and view patient medical history and records", icon: <Search />, path: "/search", color: "bg-blue-500", lightColor: "bg-blue-50 text-blue-600" },
-    { title: "Disease Dashboard", desc: "View analytics, outbreak alerts, and disease distribution", icon: <BarChart3 />, path: "/analytics", color: "bg-purple-500", lightColor: "bg-purple-50 text-purple-600" }
+    { 
+      title: "Register Patient", 
+      desc: "Add new patient records and update medical information", 
+      icon: <UserPlus />, 
+      path: "/register-patient", 
+      color: "bg-green-500", 
+      lightColor: "bg-green-50 text-green-600" 
+    },
+    { 
+      title: "Search Patient", 
+      desc: "Find and view patient medical history and records", 
+      icon: <Search />, 
+      path: "/patient-records", // UPDATED: Now points to your directory page
+      color: "bg-blue-500", 
+      lightColor: "bg-blue-50 text-blue-600" 
+    },
+    { 
+      title: "Disease Dashboard", 
+      desc: "View analytics, outbreak alerts, and disease distribution", 
+      icon: <BarChart3 />, 
+      path: "/analytics", 
+      color: "bg-purple-500", 
+      lightColor: "bg-purple-50 text-purple-600" 
+    }
   ];
 
   const stats = [
@@ -41,8 +62,8 @@ const Dashboard = () => {
             <div className={`${item.color} w-14 h-14 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-blue-100`}>
               {React.cloneElement(item.icon, { size: 28 })}
             </div>
-            <h3 className="text-2xl font-bold text-gray-800 mb-2 flex items-center gap-2">
-              <span className={item.lightColor.split(' ')[1]}>{item.icon}</span> {item.title}
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">
+              {item.title}
             </h3>
             <p className="text-gray-500 leading-relaxed">{item.desc}</p>
           </Link>
