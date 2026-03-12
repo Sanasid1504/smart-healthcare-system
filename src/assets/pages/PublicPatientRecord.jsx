@@ -33,7 +33,7 @@ const PublicPatientRecord = () => {
 
   const downloadQR = async () => {
     const res = await fetch(
-      `http://127.0.0.1:8000/patients/${id}/qr`
+      `https://hackstreak-backend.onrender.com/patients/${id}/qr`
     );
 
     const blob = await res.blob();
@@ -79,7 +79,7 @@ const PublicPatientRecord = () => {
           {/* QR */}
           <div className="text-center">
             <img
-              src={`http://127.0.0.1:8000/patients/${id}/qr`}
+              src={`https://hackstreak-backend.onrender.com/patients/${id}/qr`}
               className="mx-auto w-40"
             />
 

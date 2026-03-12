@@ -67,7 +67,7 @@ const RegisterPatient = () => {
  const downloadQR = async () => {
   try {
     const res = await fetch(
-      `http://127.0.0.1:8000/patients/${patientId}/qr`
+      `https://hackstreak-backend.onrender.com/${patientId}/qr`
     );
 
     const blob = await res.blob();
@@ -97,7 +97,7 @@ const RegisterPatient = () => {
         <p className="text-gray-500 mb-6">Patient ID: {patientId}</p>
 
         <img
-          src={`http://127.0.0.1:8000/patients/${patientId}/qr`}
+          src={`https://hackstreak-backend.onrender.com/patients/${patientId}/qr`}
           className="mx-auto mb-6 w-44"
           alt="QR"
         />

@@ -207,7 +207,7 @@ const addVisit = async () => {
             <div className="p-8 space-y-8">
 
               <img
-                src={`http://127.0.0.1:8000/patients/${id}/qr`}
+                src={`https://hackstreak-backend.onrender.com/patients/${id}/qr`}
                 className="mx-auto w-44"
                 alt="QR"
               />
