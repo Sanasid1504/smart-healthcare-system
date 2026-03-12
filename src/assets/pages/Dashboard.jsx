@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  UserPlus, Search, BarChart3, Users, 
+  UserPlus, Search, Users, 
   Activity, FileText, AlertTriangle 
 } from 'lucide-react';
 
@@ -19,17 +19,9 @@ const Dashboard = () => {
       title: "Search Patient", 
       desc: "Find and view patient medical history and records", 
       icon: <Search />, 
-      path: "/patient-records", // UPDATED: Now points to your directory page
+      path: "/patient-records", 
       color: "bg-blue-500", 
       lightColor: "bg-blue-50 text-blue-600" 
-    },
-    { 
-      title: "Disease Dashboard", 
-      desc: "View analytics, outbreak alerts, and disease distribution", 
-      icon: <BarChart3 />, 
-      path: "/analytics", 
-      color: "bg-purple-500", 
-      lightColor: "bg-purple-50 text-purple-600" 
     }
   ];
 
@@ -55,8 +47,8 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Main Action Cards */}
-      <div className="grid md:grid-cols-3 gap-6">
+      {/* Main Action Cards - Now in 2 columns */}
+      <div className="grid md:grid-cols-2 gap-6">
         {actions.map((item, idx) => (
           <Link key={idx} to={item.path} className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition group">
             <div className={`${item.color} w-14 h-14 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-blue-100`}>

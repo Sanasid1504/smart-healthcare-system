@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Activity, LogOut, LayoutDashboard, Search, UserPlus, BarChart3 } from 'lucide-react';
+import { Activity, LogOut, LayoutDashboard, Search, UserPlus } from 'lucide-react';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -16,13 +16,15 @@ const Navbar = () => {
 
         <div className="flex items-center gap-6">
           <div className="hidden md:flex items-center gap-4 text-sm font-medium text-gray-600">
-            <Link to="/dashboard" className="hover:text-blue-600 flex items-center gap-1">
+            <Link to="/dashboard" className="hover:text-blue-600 flex items-center gap-1 transition-colors">
               <LayoutDashboard size={18} /> Dashboard
             </Link>
-            <Link to="/register-patient" className="hover:text-blue-600 flex items-center gap-1">
+            <Link to="/register-patient" className="hover:text-blue-600 flex items-center gap-1 transition-colors">
               <UserPlus size={18} /> Register
             </Link>
-            <Link to="/search" className="hover:text-blue-600 flex items-center gap-1">
+            
+            {/* UPDATED: Changed '/search' to '/patient-records' */}
+            <Link to="/patient-records" className="hover:text-blue-600 flex items-center gap-1 transition-colors">
               <Search size={18} /> Search
             </Link>
           </div>
