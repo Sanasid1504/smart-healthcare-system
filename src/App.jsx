@@ -17,7 +17,7 @@ function App() {
         <Routes>
           {/* 1. PUBLIC ROUTE */}
           <Route path="/login" element={<Login />} />
-
+        <Route path="patient/:id" element={<PublicPatientRecord/>} />
           {/* 2. PROTECTED APP WRAPPER */}
           <Route path="/*" element={
             <>
@@ -39,12 +39,13 @@ function App() {
 
                   {/* Catch-all redirect */}
                   <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                  <Route path="patient/:id" element={<PublicPatientRecord/>} />
+                  
                 </Routes>
               </main>
             </>
           } />
         </Routes>
+        
       </div>
     </Router>
   );
